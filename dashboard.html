@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AutoOps control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #e9ecef;
+    --panel: #f4f6f7;
+    --ink: #14212b;
+    --ink-soft: #5c6b77;
+    --rule: #c3ccd4;
+    --calm: #2e7d6b;
+    --watch: #b87814;
+    --critical: #a62f2a;
+    --trace: #1f4e79;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .shell { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+  h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .verdict { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+  .verdict strong { font-weight: 600; color: var(--ink); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 190px 1fr 210px;
+    gap: 20px;
+    align-items: center;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .name { font-weight: 600; margin: 0; }
+  .status { display: flex; align-items: center; gap: 7px; color: var(--ink-soft); font-size: 0.86rem; }
+  .dot { width: 9px; height: 9px; border-radius: 2px; background: var(--calm); flex: none; }
+  .s-watch .dot, .s-recovering .dot, .s-healing .dot { background: var(--watch); }
+  .s-at.risk .dot, .s-down .dot, .s-unreachable .dot { background: var(--critical); }
+  .s-at\.risk .dot { background: var(--critical); }
+
+  .trace { width: 100%; height: 56px; display: block; background: var(--panel); }
+  .trace-note { font-size: 0.76rem; color: var(--ink-soft); margin: 4px 0 0; font-family: "IBM Plex Mono", monospace; }
+
+  .telemetry { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--ink-soft); }
+  .telemetry span { display: inline-block; min-width: 96px; }
+  .risk-figure { font-size: 1.5rem; color: var(--ink); display: block; margin-bottom: 2px; }
+
+  .chaos { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chaos button {
+    font: inherit; font-size: 0.76rem;
+    background: transparent; color: var(--trace);
+    border: 1px solid var(--rule); border-radius: 0;
+    padding: 3px 8px; cursor: pointer;
+  }
+  .chaos button:hover { border-color: var(--trace); }
+  .chaos button:focus-visible { outline: 2px solid var(--trace); outline-offset: 2px; }
+
+  .log { margin-top: 36px; }
+  .log h2 { font-size: 1rem; font-weight: 600; margin: 0 0 10px; }
+  .log ol { list-style: none; margin: 0; padding: 0 0 0 16px; border-left: 2px solid var(--rule); }
+  .log li { padding: 6px 0; display: flex; gap: 12px; align-items: baseline; }
+  .log time { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--ink-soft); flex: none; }
+  .log .what { font-weight: 500; }
+  .log .predictive_restart .what { color: var(--calm); }
+  .log .reactive_restart .what, .log .heal_failed .what { color: var(--critical); }
+  .log .chaos_injected .what { color: var(--watch); }
+  .empty { color: var(--ink-soft); padding: 6px 0; }
+
+  @media (max-width: 720px) {
+    .row { grid-template-columns: 1fr; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>AutoOps control</h1>
+    <p class="verdict" id="verdict">Connecting to the agent…</p>
+  </header>
+
+  <main id="fleet"></main>
+
+  <section class="log">
+    <h2>What the agent did</h2>
+    <ol id="log"><li class="empty">Nothing yet. Break a service to see the agent respond.</li></ol>
+  </section>
+</div>
+
+<script>
+const FAULTS = ["memory_leak", "latency_creep", "error_storm"];
+
+function trace(history, threshold) {
+  const w = 320, h = 56;
+  if (!history.length) return `<svg class="trace" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"></svg>`;
+  const step = w / Math.max(history.length - 1, 1);
+  const pts = history.map((v, i) => `${(i * step).toFixed(1)},${(h - v * h).toFixed(1)}`).join(" ");
+  const ty = (h - threshold * h).toFixed(1);
+  return `<svg class="trace" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img"
+             aria-label="risk over the last few minutes">
+    <line x1="0" y1="${ty}" x2="${w}" y2="${ty}" stroke="#a62f2a" stroke-width="1" stroke-dasharray="4 4" />
+    <polyline points="${pts}" fill="none" stroke="#1f4e79" stroke-width="2" vector-effect="non-scaling-stroke" />
+  </svg>`;
+}
+
+function serviceRow(s, threshold) {
+  const cls = "s-" + s.status.replace(/\s+/g, ".");
+  return `<article class="row ${cls}">
+    <div>
+      <p class="name">${s.name}</p>
+      <p class="status"><span class="dot"></span>${s.status}${s.fault !== "none" ? " · " + s.fault.replace("_", " ") : ""}</p>
+      <div class="chaos">
+        ${FAULTS.map(f => `<button data-svc="${s.name}" data-fault="${f}">${f.replace("_", " ")}</button>`).join("")}
+      </div>
+    </div>
+    <div>
+      ${trace(s.history, threshold)}
+      <p class="trace-note">risk trace · dashed line = act threshold ${threshold}</p>
+    </div>
+    <div class="telemetry">
+      <span class="risk-figure">${(s.risk * 100).toFixed(0)}%</span>
+      <span>cpu ${s.cpu}%</span><span>mem ${s.mem}%</span>
+      <span>p50 ${s.latency}ms</span><span>err ${s.err}%</span>
+      <span>restarts ${s.restarts}</span><span>novelty ${s.anomaly}</span>
+    </div>
+  </article>`;
+}
+
+function verdictLine(d) {
+  const risky = d.services.filter(s => s.risk >= d.threshold).length;
+  const st = d.stats;
+  if (risky) return `<strong>${risky} service${risky > 1 ? "s" : ""} trending toward failure.</strong> The agent restarts on two consecutive readings above threshold.`;
+  return `<strong>Fleet stable.</strong> ${st.predicted_saves} restart${st.predicted_saves === 1 ? "" : "s"} before failure, ${st.reactive_restarts} after, ${st.downtime_seconds}s total downtime across ${st.polls} polls.`;
+}
+
+async function refresh() {
+  try {
+    const d = await (await fetch("/api/state")).json();
+    document.getElementById("verdict").innerHTML = verdictLine(d);
+    document.getElementById("fleet").innerHTML = d.services.map(s => serviceRow(s, d.threshold)).join("");
+    const log = document.getElementById("log");
+    log.innerHTML = d.actions.length
+      ? d.actions.map(a => `<li class="${a.kind}">
+          <time>${new Date(a.ts * 1000).toLocaleTimeString()}</time>
+          <span><span class="what">${a.kind.replace(/_/g, " ")}</span> — ${a.detail}${a.risk ? ` (risk ${a.risk})` : ""}</span>
+        </li>`).join("")
+      : `<li class="empty">Nothing yet. Break a service to see the agent respond.</li>`;
+  } catch (e) {
+    document.getElementById("verdict").textContent = "The agent is not responding. Check that it is running on this port.";
+  }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-fault]");
+  if (b) fetch(`/api/chaos/${b.dataset.svc}/${b.dataset.fault}`, { method: "POST" }).then(refresh);
+});
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+services:
+  payments:
+    build: .
+    container_name: autoops-payments
+    command: python service.py
+    environment: { SERVICE_NAME: payments, PORT: "8000" }
+    ports: ["8001:8000"]
+
+  orders:
+    build: .
+    container_name: autoops-orders
+    command: python service.py
+    environment: { SERVICE_NAME: orders, PORT: "8000" }
+    ports: ["8002:8000"]
+
+  inventory:
+    build: .
+    container_name: autoops-inventory
+    command: python service.py
+    environment: { SERVICE_NAME: inventory, PORT: "8000" }
+    ports: ["8003:8000"]
+
+  agent:
+    build: .
+    container_name: autoops-agent
+    depends_on: [payments, orders, inventory]
+    environment:
+      SERVICES: "payments=http://payments:8000,orders=http://orders:8000,inventory=http://inventory:8000"
+      HEAL_MODE: docker
+      PORT: "8000"
+    ports: ["8000:8000"]
+    volumes:
+      # Lets the agent restart sibling containers — this is what makes the
+      # remediation a real container restart rather than an in-process reset.
+      - /var/run/docker.sock:/var/run/docker.sock

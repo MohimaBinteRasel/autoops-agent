@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-09-19 02:28:21",
+  "train_windows": 28568,
+  "test_windows": 9577,
+  "positive_rate": 0.1496,
+  "roc_auc": 0.9977,
+  "pr_auc": 0.9878,
+  "threshold": 0.51,
+  "classification_report": {
+    "stable": {
+      "precision": 0.9885524372230429,
+      "recall": 0.9912367316711923,
+      "f1-score": 0.9898927646986319,
+      "support": 8102.0
+    },
+    "pre-failure": {
+      "precision": 0.9511355815554026,
+      "recall": 0.9369491525423729,
+      "f1-score": 0.9439890710382514,
+      "support": 1475.0
+    },
+    "accuracy": 0.982875639553096,
+    "macro avg": {
+      "precision": 0.9698440093892227,
+      "recall": 0.9640929421067825,
+      "f1-score": 0.9669409178684416,
+      "support": 9577.0
+    },
+    "weighted avg": {
+      "precision": 0.9827896866633927,
+      "recall": 0.982875639553096,
+      "f1-score": 0.982822915252139,
+      "support": 9577.0
+    }
+  },
+  "operational": {
+    "episodes_tested": 90,
+    "failing_episodes": 59,
+    "caught_before_failure": 59,
+    "missed_failures": 0,
+    "median_lead_time_s": 75.0,
+    "min_lead_time_s": 54.0,
+    "false_alarm_rate": 0.0
+  },
+  "top_features": [
+    [
+      "cpu_mean",
+      0.4382
+    ],
+    [
+      "err_last",
+      0.1584
+    ],
+    [
+      "mem_std",
+      0.1214
+    ],
+    [
+      "mem_last",
+      0.088
+    ],
+    [
+      "err_std",
+      0.0524
+    ],
+    [
+      "err_slope",
+      0.0492
+    ],
+    [
+      "mem_slope",
+      0.0204
+    ],
+    [
+      "mem_mean",
+      0.0171
+    ]
+  ],
+  "train_seconds": 72.8
+}
