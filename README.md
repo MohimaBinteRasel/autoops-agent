@@ -1,4 +1,3 @@
-<img width="1920" height="1080" alt="predictive-restart-demo" src="https://github.com/user-attachments/assets/11a4a241-33d7-41ca-8d03-4896e5ce5dde" />
 # AutoOps-Agent
 ![tests](https://github.com/MohimaBinteRasel/autoops-agent/actions/workflows/ci.yml/badge.svg)
 
@@ -106,6 +105,7 @@ pip install -r requirements.txt
 python train_model.py     # ~1 minute, writes model.joblib and metrics.json
 python run_demo.py        # starts everything, opens the dashboard
 ```
+<img width="1920" height="1080" alt="predictive-restart-demo" src="https://github.com/user-attachments/assets/11a4a241-33d7-41ca-8d03-4896e5ce5dde" />
 
 The dashboard is at http://localhost:8000. Each service row has buttons to inject
 a fault; watch the risk trace climb and the agent step in before the service dies.
