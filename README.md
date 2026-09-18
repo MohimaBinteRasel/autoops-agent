@@ -1,4 +1,5 @@
 # AutoOps-Agent
+![tests](https://github.com/MohimaBinteRasel/autoops-agent/actions/workflows/ci.yml/badge.svg)
 
 **Self-healing microservices and a predictive cloud incident resolver.**
 
