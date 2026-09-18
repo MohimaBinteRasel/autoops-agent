@@ -1,3 +1,4 @@
+<img width="1920" height="1080" alt="predictive-restart-demo" src="https://github.com/user-attachments/assets/11a4a241-33d7-41ca-8d03-4896e5ce5dde" />
 # AutoOps-Agent
 ![tests](https://github.com/MohimaBinteRasel/autoops-agent/actions/workflows/ci.yml/badge.svg)
 
